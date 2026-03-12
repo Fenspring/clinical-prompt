@@ -923,11 +923,6 @@
       try {
         const selectedModel = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
 
-        const hasWebGPU = await webllm.hasWebGPU();
-        if (!hasWebGPU) {
-          throw new Error("WebGPU is not available in this browser/device.");
-        }
-
         engine = await webllm.CreateMLCEngine(selectedModel, {
           initProgressCallback: (report) => {
             const pct = Math.round(report.progress * 100);
