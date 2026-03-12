@@ -923,10 +923,12 @@
       try {
         const selectedModel = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
 
-        engine = new webllm.MLCEngine();
-        window._setEngine(engine);
+        const hasWebGPU = await webllm.hasWebGPU();
+        if (!hasWebGPU) {
+          throw new Error("WebGPU is not available in this browser/device.");
+        }
 
-        await engine.reload(selectedModel, {
+        engine = await webllm.CreateMLCEngine(selectedModel, {
           initProgressCallback: (report) => {
             const pct = Math.round(report.progress * 100);
             progressFill.style.width = pct + '%';
@@ -934,17 +936,19 @@
           }
         });
 
+        window._setEngine(engine);
+
         dot.className = 'model-dot ready';
         status.textContent = 'Llama 3.2 3B — ready · runs entirely in your browser · no data sent anywhere';
         progressWrap.style.display = 'none';
         window._setReady(true);
       } catch (err) {
         dot.className = 'model-dot error';
-        status.textContent = 'Failed to load model — WebGPU required (Chrome / Edge 113+)';
+        status.textContent = 'Failed: ' + (err.message || err.toString());
         btn.style.display = 'block';
         btn.textContent = '⬇ Retry';
         progressWrap.style.display = 'none';
-        console.error(err);
+        console.error("WebLLM Error Details:", err);
       }
     };
 
