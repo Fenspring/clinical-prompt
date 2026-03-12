@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClinicalPrompt — Nurse Informatics AI Prompt Builder</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f5f2ed;
+      --surface: #ffffff;
+      --surface2: #f0ede7;
+      --border: #ddd8cf;
+      --accent: #1a5c4a;
+      --accent-light: #e8f2ef;
+      --accent2: #c4763a;
+      --text: #1c1a17;
+      --text-muted: #6b6560;
+      --text-light: #9e9891;
+      --success: #2d7a5f;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--accent);
+      color: white;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.4rem;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo span {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.85rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 300;
+      margin-left: 4px;
+    }
+
+    /* ── MODEL STATUS BAR ── */
+    #modelBar {
+      background: #1c2b26;
+      color: #a8d5c5;
+      padding: 10px 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .model-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .model-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b9e8a;
+      flex-shrink: 0;
+    }
+
+    .model-dot.ready {
+      background: #4ade80;
+      box-shadow: 0 0 6px #4ade80;
+    }
+
+    .model-dot.loading {
+      background: #facc15;
+      animation: pulse 1s infinite;
+    }
+
+    .model-dot.error {
+      background: #f87171;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    #loadModelBtn {
+      background: var(--accent2);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 16px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: none;
+    }
+
+    #loadModelBtn:hover {
+      background: #a8622e;
+    }
+
+    #loadModelBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── PROGRESS BAR ── */
+    #progressWrap {
+      flex: 1;
+      min-width: 200px;
+      display: none;
+    }
+
+    #progressBar {
+      height: 6px;
+      background: #2d4a40;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #progressFill {
+      height: 100%;
+      background: linear-gradient(90deg, #4ade80, #22c55e);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #progressLabel {
+      font-size: 0.72rem;
+      color: #6b9e8a;
+      margin-top: 3px;
+    }
+
+    /* ── LAYOUT ── */
+    .app {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      min-height: calc(100vh - 104px);
+    }
+
+    /* ── LEFT PANEL ── */
+    .left-panel {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .panel-intro {
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-intro h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.25rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .panel-intro p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      line-height: 1.55;
+    }
+
+    .form-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.1rem;
+    }
+
+    .section-label .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent2);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .field {
+      margin-bottom: 0.75rem;
+    }
+
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.875rem;
+      color: var(--text);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      resize: none;
+    }
+
+    input[type="text"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(26, 92, 74, 0.1);
+    }
+
+    textarea {
+      line-height: 1.55;
+      min-height: 72px;
+    }
+
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b6560' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-top: 3px;
+      font-style: italic;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    .generate-btn {
+      width: 100%;
+      padding: 13px 20px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(26, 92, 74, 0.3);
+      letter-spacing: 0.01em;
+      margin-top: 0.5rem;
+    }
+
+    .generate-btn:hover {
+      background: #154d3d;
+      transform: translateY(-1px);
+    }
+
+    .generate-btn:active {
+      transform: translateY(0);
+    }
+
+    .generate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    /* ── OUTPUT CARDS ── */
+    .output-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.4s ease;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .card-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 20px;
+    }
+
+    .badge-green {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .badge-amber {
+      background: #fef3e2;
+      color: #a05a1a;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .icon-btn.copied {
+      color: var(--success);
+      border-color: var(--success);
+      background: var(--accent-light);
+    }
+
+    .card-body {
+      padding: 18px;
+    }
+
+    .prompt-output {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .analysis-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+    }
+
+    .analysis-item .a-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .analysis-item .a-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    .analysis-item .a-sub {
+      font-size: 0.72rem;
+      color: var(--text-light);
+    }
+
+    .suggestions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .suggestion-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.835rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .suggestion-item .s-icon {
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
+      flex: 1;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state p {
+      color: var(--text-light);
+      font-size: 0.875rem;
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    .loading-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.3s ease;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-text {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .loading-text strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .tips-strip {
+      background: linear-gradient(135deg, var(--accent-light), #f0f8f5);
+      border: 1px solid #c2ddd6;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      font-size: 0.8rem;
+      color: var(--accent);
+      line-height: 1.5;
+    }
+
+    .tips-strip strong {
+      display: block;
+      font-weight: 600;
+    }
+
+    /* ── STREAMING OUTPUT ── */
+    #streamBox {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 60px;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: var(--accent);
+      margin-left: 2px;
+      animation: blink 0.8s infinite;
+      vertical-align: text-bottom;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .analysis-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🏥</div>
+      ClinicalPrompt <span>/ Nurse Informatics Edition</span>
+    </div>
+  </header>
+
+  <!-- MODEL STATUS BAR -->
+  <div id="modelBar">
+    <div class="model-info">
+      <div class="model-dot loading" id="modelDot"></div>
+      <span id="modelStatus">Loading AI model — runs 100% in your browser, no data sent anywhere</span>
+    </div>
+    <div id="progressWrap" style="display:block;">
+      <div id="progressBar">
+        <div id="progressFill"></div>
+      </div>
+      <div id="progressLabel">Initializing…</div>
+    </div>
+    <button id="loadModelBtn" onclick="loadModel()">⬇ Retry</button>
+  </div>
+
+  <div class="app">
+
+    <!-- ══ LEFT: INPUT PANEL ══ -->
+    <div class="left-panel">
+      <div class="panel-intro">
+        <h2>Build a Better Clinical Prompt</h2>
+        <p>Fill in the context fields below. The AI will craft a structured, context-rich prompt ready to paste into any
+          large language model.</p>
+      </div>
+
+      <!-- ROLE & SETTING -->
+      <div class="form-section">
+        <div class="section-label"><span class="dot"></span> Role & Clinical Setting</div>
+        <div class="field">
+          <label for="role">Your Clinical Role</label>
+          <select id="role">
+            <option value="">— Select your role —</option>
+            <option>Nurse Informaticist</option>
+            <option>Clinical Informatics Specialist</option>
+            <option>Chief Nursing Informatics Officer (CNIO)</option>
+            <option>EHR Trainer / Superuser</option>
+            <option>Quality Improvement Nurse</option>
+            <option>Bedside RN</option>
+            <option>Charge Nurse</option>
+            <option>Case Manager / Care Coordinator</option>
+            <option>Infection Control Nurse</option>
+            <option>Patient Safety Officer</option>
+            <option>Population Health Nurse</option>
+            <option>Custom...</option>
+          </select>
+        </div>
+        <div class="field" id="customRoleField" style="display:none;">
+          <label for="customRole">Describe your role</label>
+          <input type="text" id="customRole" placeholder="e.g., Pediatric Oncology Informatics Nurse" />
+        </div>
+        <div class="field">
+          <label for="setting">Care Setting</label>
+          <select id="setting">
+            <option value="">— Select setting —</option>
+            <option>Acute Care / Inpatient Hospital</option>
+            <option>ICU / Critical Care</option>
+            <option>Emergency Department</option>
+            <option>Ambulatory / Outpatient Clinic</option>
+            <option>Long-Term Care / SNF</option>
+            <option>Home Health</option>
+            <option>Surgical / Perioperative</option>
+            <option>Behavioral Health</option>
+            <option>Pediatrics</option>
+            <option>Academic Medical Center</option>
+            <option>Rural / Critical Access Hospital</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ehr">EHR Platform (optional)</label>
+          <select id="ehr">
+            <option value="">— Select or skip —</option>
+            <option>Epic</option>
+            <option>Cerner / Oracle Health</option>
+            <option>Meditech</option>
+            <option>CPSI / TruBridge</option>
+            <option>Allscripts / Veradigm</option>
+            <option>PointClickCare</option>
+            <option>athenahealth</option>
+            <option>Other / Not specified</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- TASK -->
+      <div class="form-section">
+        <div class="section-label"><span class="dot"></span> Task & Objective</div>
+        <div class="field">
+          <label for="taskType">Task Category</label>
+          <select id="taskType">
+            <option value="">— What are you trying to do? —</option>
+            <option>Analyze / Summarize clinical data</option>
+            <option>Draft a policy or procedure</option>
+            <option>Write patient education content</option>
+            <option>Build a training or educational module</option>
+            <option>Generate SBAR / clinical handoff</option>
+            <option>Identify trends or patterns in data</option>
+            <option>Translate complex info for patients</option>
+            <option>Draft a memo / communication</option>
+            <option>Support a quality improvement project</option>
+            <option>Optimize a clinical workflow</option>
+            <option>Create documentation templates</option>
+            <option>Review or summarize research / literature</option>
+            <option>Support regulatory / compliance review</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="taskDetail">Describe the specific task</label>
+          <textarea id="taskDetail" rows="3"
+            placeholder="e.g., Summarize the last 3 months of sepsis bundle compliance data and highlight which units have the lowest completion rates..."></textarea>
+          <div class="hint">Be specific — include what you want the AI to produce.</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- AUDIENCE -->
+      <div class="form-section">
+        <div class="section-label"><span class="dot"></span> Audience & Patient Context</div>
+        <div class="field">
+          <label for="audience">Intended Audience for Output</label>
+          <select id="audience">
+            <option value="">— Who will read this? —</option>
+            <option>Clinical nursing staff (RNs, LPNs)</option>
+            <option>Physicians / APPs</option>
+            <option>Patients and families</option>
+            <option>Healthcare administrators / leadership</option>
+            <option>New nurses / nursing students</option>
+            <option>Interdisciplinary team</option>
+            <option>Quality / PI committee</option>
+            <option>IT / informatics team</option>
+            <option>Regulators / accreditation bodies</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="patientContext">Patient Population (if relevant)</label>
+          <input type="text" id="patientContext"
+            placeholder="e.g., Adult oncology patients, ages 50–80, limited health literacy" />
+          <div class="hint">Include age group, acuity, language/literacy level if applicable.</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- CONSTRAINTS -->
+      <div class="form-section">
+        <div class="section-label"><span class="dot"></span> Constraints & Requirements</div>
+        <div class="field">
+          <label for="format">Desired Output Format</label>
+          <select id="format">
+            <option value="">— Choose format —</option>
+            <option>Bullet point summary</option>
+            <option>Numbered step-by-step list</option>
+            <option>Prose / narrative paragraph(s)</option>
+            <option>Table or comparison matrix</option>
+            <option>SBAR format</option>
+            <option>Template with fill-in-the-blank fields</option>
+            <option>FAQ style (Q&A)</option>
+            <option>Plain language (6th grade reading level)</option>
+            <option>Executive summary (one page)</option>
+            <option>Annotated outline</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="constraints">Constraints or Boundaries</label>
+          <textarea id="constraints" rows="2"
+            placeholder="e.g., Do not include patient identifiers. Follow ANA Code of Ethics. Keep under 300 words."></textarea>
+          <div class="hint">Regulatory, ethical, PHI, or length constraints.</div>
+        </div>
+        <div class="field">
+          <label for="tone">Tone / Voice</label>
+          <select id="tone">
+            <option value="">— Select tone —</option>
+            <option>Clinical and precise</option>
+            <option>Empathetic and supportive</option>
+            <option>Educational and instructional</option>
+            <option>Formal / professional</option>
+            <option>Plain and direct</option>
+            <option>Motivating and encouraging</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- EXTRA CONTEXT -->
+      <div class="form-section">
+        <div class="section-label"><span class="dot"></span> Additional Context</div>
+        <div class="field">
+          <label for="extra">Any other context the AI should know?</label>
+          <textarea id="extra" rows="3"
+            placeholder="e.g., We recently went live with a new sepsis alert in Epic. Staff are resistant. Previous compliance rate was 61%. Goal is 85% by Q3."></textarea>
+          <div class="hint">Background, recent events, organizational goals, or data points.</div>
+        </div>
+      </div>
+
+      <button class="generate-btn" id="generateBtn" onclick="generatePrompt()">
+        <span>✦</span> Build My Clinical Prompt
+      </button>
+    </div>
+
+    <!-- ══ RIGHT: OUTPUT PANEL ══ -->
+    <div class="right-panel" id="rightPanel">
+      <div class="tips-strip">
+        <span>💡</span>
+        <div>
+          <strong>How to use this tool</strong>
+          First load the AI model (one-time ~1.5 GB download, cached in your browser). Then fill in the fields and click
+          "Build My Clinical Prompt" to generate a structured prompt ready for ChatGPT, Claude, Gemini, or any LLM.
+          Everything runs locally — no data leaves your device.
+        </div>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🩺</div>
+        <h3>Your prompt will appear here</h3>
+        <p>The AI model is loading in the background. Fill in the fields on the left, then generate your clinical prompt
+          once it's ready.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WebLLM from CDN -->
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+
+    let engine = null;
+    let modelReady = false;
+
+    // Expose to global scope so onclick handlers can reach them
+    window._webllm = webllm;
+    window._getEngine = () => engine;
+    window._setEngine = (e) => { engine = e; };
+    window._isReady = () => modelReady;
+    window._setReady = (v) => { modelReady = v; };
+
+    window.loadModel = async function () {
+      const btn = document.getElementById('loadModelBtn');
+      const dot = document.getElementById('modelDot');
+      const status = document.getElementById('modelStatus');
+      const progressWrap = document.getElementById('progressWrap');
+      const progressFill = document.getElementById('progressFill');
+      const progressLabel = document.getElementById('progressLabel');
+
+      btn.style.display = 'none';
+      dot.className = 'model-dot loading';
+      progressWrap.style.display = 'block';
+      status.textContent = 'Loading Llama 3.2 3B… first visit downloads ~2.0 GB, cached after that';
+
+      try {
+        const selectedModel = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
+
+        engine = new webllm.MLCEngine();
+        window._setEngine(engine);
+
+        await engine.reload(selectedModel, {
+          initProgressCallback: (report) => {
+            const pct = Math.round(report.progress * 100);
+            progressFill.style.width = pct + '%';
+            progressLabel.textContent = report.text || `Loading… ${pct}%`;
+          }
+        });
+
+        dot.className = 'model-dot ready';
+        status.textContent = 'Llama 3.2 3B — ready · runs entirely in your browser · no data sent anywhere';
+        progressWrap.style.display = 'none';
+        window._setReady(true);
+      } catch (err) {
+        dot.className = 'model-dot error';
+        status.textContent = 'Failed to load model — WebGPU required (Chrome / Edge 113+)';
+        btn.style.display = 'block';
+        btn.textContent = '⬇ Retry';
+        progressWrap.style.display = 'none';
+        console.error(err);
+      }
+    };
+
+    // Auto-load on page start
+    window.addEventListener('load', () => loadModel());
+
+    window.generatePrompt = async function () {
+      if (!window._isReady()) {
+        alert('The AI model is still loading — please wait a moment and try again.');
+        return;
+      }
+
+      const data = buildUserData();
+      if (!data.taskDetail) { alert('Please fill in the Task Description at minimum.'); return; }
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⟳</span> Building prompt…';
+
+      const panel = document.getElementById('rightPanel');
+      document.getElementById('emptyState')?.remove();
+      document.getElementById('streamCard')?.remove();
+
+      // Create streaming card
+      const streamCard = document.createElement('div');
+      streamCard.className = 'output-card';
+      streamCard.id = 'streamCard';
+      streamCard.innerHTML = `
+      <div class="card-header">
+        <div class="card-title">📋 Your Clinical Prompt <span class="card-badge badge-green">Generating…</span></div>
+        <div class="card-actions" id="streamActions"></div>
+      </div>
+      <div class="card-body">
+        <div id="streamBox"></div>
+      </div>`;
+      panel.appendChild(streamCard);
+
+      const streamBox = document.getElementById('streamBox');
+      streamBox.innerHTML = '<span class="cursor"></span>';
+
+      const systemPrompt = `You are an expert clinical informatics AI assistant helping nurse informaticists build excellent prompts for large language models. 
+
+Given structured clinical context, produce a complete, ready-to-use clinical prompt. The prompt should:
+- Open with the clinician's role and setting as context for the LLM
+- Clearly state the task and what output is expected
+- Include relevant constraints (PHI, regulatory, format, tone)
+- Specify the audience and any patient population context
+- Be professional, safe, and immediately usable
+
+After the prompt, on a new line write "---ANALYSIS---" then provide:
+- Context score: X/10
+- Clarity score: X/10  
+- PHI risk: Low/Medium/High
+- One sentence safety note
+
+Then write "---TIPS---" and list 3 numbered improvement suggestions.`;
+
+      const userMsg = `Build a clinical AI prompt from this context:
+ROLE: ${data.role || 'Not specified'}
+SETTING: ${data.setting || 'Not specified'}
+EHR: ${data.ehr || 'Not specified'}
+TASK TYPE: ${data.taskType || 'Not specified'}
+TASK: ${data.taskDetail}
+AUDIENCE: ${data.audience || 'Not specified'}
+PATIENT POPULATION: ${data.patientContext || 'None specified'}
+OUTPUT FORMAT: ${data.format || 'Not specified'}
+TONE: ${data.tone || 'Not specified'}
+CONSTRAINTS: ${data.constraints || 'None'}
+EXTRA CONTEXT: ${data.extra || 'None'}`;
+
+      let fullText = '';
+      let phase = 'prompt'; // 'prompt', 'analysis', 'tips'
+
+      try {
+        const currentEngine = window._getEngine();
+        const stream = await currentEngine.chat.completions.create({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMsg }
+          ],
+          stream: true,
+          temperature: 0.4,
+          max_tokens: 900,
+        });
+
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content || '';
+          fullText += delta;
+          // Render live
+          streamBox.textContent = fullText;
+          streamBox.innerHTML += '<span class="cursor"></span>';
+          streamBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+
+        // Done streaming — parse and render properly
+        streamCard.remove();
+        parseAndRender(fullText, panel);
+
+      } catch (err) {
+        streamBox.textContent = 'Error: ' + err.message;
+        console.error(err);
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<span>✦</span> Build My Clinical Prompt';
+    };
+
+    function buildUserData() {
+      const role = document.getElementById('role').value === 'Custom...'
+        ? document.getElementById('customRole').value.trim()
+        : document.getElementById('role').value;
+      return {
+        role,
+        setting: document.getElementById('setting').value,
+        ehr: document.getElementById('ehr').value,
+        taskType: document.getElementById('taskType').value,
+        taskDetail: document.getElementById('taskDetail').value.trim(),
+        audience: document.getElementById('audience').value,
+        patientContext: document.getElementById('patientContext').value.trim(),
+        format: document.getElementById('format').value,
+        constraints: document.getElementById('constraints').value.trim(),
+        tone: document.getElementById('tone').value,
+        extra: document.getElementById('extra').value.trim(),
+      };
+    }
+
+    function parseAndRender(raw, panel) {
+      const analysisSplit = raw.indexOf('---ANALYSIS---');
+      const tipsSplit = raw.indexOf('---TIPS---');
+
+      const promptText = analysisSplit > -1 ? raw.slice(0, analysisSplit).trim() : raw.trim();
+      const analysisText = analysisSplit > -1
+        ? (tipsSplit > -1 ? raw.slice(analysisSplit + 14, tipsSplit) : raw.slice(analysisSplit + 14)).trim()
+        : '';
+      const tipsText = tipsSplit > -1 ? raw.slice(tipsSplit + 10).trim() : '';
+
+      // ── PROMPT CARD ──
+      const pc = document.createElement('div');
+      pc.className = 'output-card';
+      pc.innerHTML = `
+      <div class="card-header">
+        <div class="card-title">📋 Your Clinical Prompt <span class="card-badge badge-green">Ready to Use</span></div>
+        <div class="card-actions">
+          <button class="icon-btn" id="copyBtn">📄 Copy</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="prompt-output">${escHtml(promptText)}</div>
+      </div>`;
+      panel.appendChild(pc);
+      document.getElementById('copyBtn').onclick = () => copyText(document.getElementById('copyBtn'), promptText);
+
+      // ── ANALYSIS CARD ──
+      if (analysisText) {
+        const getScore = (key) => {
+          const m = analysisText.match(new RegExp(key + '[:\\s]+([\\d\\.]+(?:\\/\\d+)?)', 'i'));
+          return m ? m[1] : '—';
+        };
+        const getPhi = () => {
+          const m = analysisText.match(/PHI risk[:\\s]+(Low|Medium|High)/i);
+          return m ? m[1] : '—';
+        };
+        const getSafetyNote = () => {
+          const lines = analysisText.split('\n').filter(l => l.length > 20 && !/score|risk/i.test(l));
+          return lines[0] || '';
+        };
+        const phi = getPhi();
+        const phiColor = phi === 'Low' ? '#2d7a5f' : phi === 'Medium' ? '#a05a1a' : '#c0392b';
+
+        const ac = document.createElement('div');
+        ac.className = 'output-card';
+        ac.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">📊 Prompt Quality Analysis <span class="card-badge badge-amber">Insights</span></div>
+        </div>
+        <div class="card-body">
+          <div class="analysis-grid">
+            <div class="analysis-item"><div class="a-label">Context Score</div><div class="a-value">${getScore('context score')}</div><div class="a-sub">specificity</div></div>
+            <div class="analysis-item"><div class="a-label">Clarity Score</div><div class="a-value">${getScore('clarity score')}</div><div class="a-sub">readability</div></div>
+            <div class="analysis-item"><div class="a-label">PHI Risk</div><div class="a-value" style="color:${phiColor}">${phi}</div><div class="a-sub">privacy level</div></div>
+          </div>
+          ${getSafetyNote() ? `<div class="analysis-item" style="margin-top:10px;"><div class="a-label">Safety Note</div><div class="a-sub" style="color:var(--text-muted);font-style:italic;margin-top:4px;">${escHtml(getSafetyNote())}</div></div>` : ''}
+        </div>`;
+        panel.appendChild(ac);
+      }
+
+      // ── TIPS CARD ──
+      if (tipsText) {
+        const icons = ['🔍', '✏️', '🛡️'];
+        const tips = tipsText.split('\n')
+          .filter(l => /^\d+/.test(l.trim()))
+          .map((l, i) => `<div class="suggestion-item"><span class="s-icon">${icons[i] || '💡'}</span><span>${escHtml(l.replace(/^\d+[\.\)]\s*/, ''))}</span></div>`)
+          .join('');
+        if (tips) {
+          const tc = document.createElement('div');
+          tc.className = 'output-card';
+          tc.innerHTML = `
+          <div class="card-header"><div class="card-title">💡 Improvement Tips <span class="card-badge badge-green">Tips</span></div></div>
+          <div class="card-body"><div class="suggestions-list">${tips}</div></div>`;
+          panel.appendChild(tc);
+        }
+      }
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function copyText(btn, text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = '✅ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '📄 Copy'; btn.classList.remove('copied'); }, 2000);
+      } catch { btn.textContent = 'Error'; }
+    }
+
+    // Role custom toggle
+    document.getElementById('role').addEventListener('change', function () {
+      document.getElementById('customRoleField').style.display = this.value === 'Custom...' ? 'block' : 'none';
+    });
+  </script>
+
+</body>
+
+</html>
